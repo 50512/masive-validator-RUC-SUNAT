@@ -3,7 +3,7 @@ import sqlite3
 import time
 from os import path, remove
 
-def connect_db_file(db_path):
+def connect_and_create_db_file(db_path):
     if not path.exists(db_path):
         with open(db_path, "w"):
             print(db_path, "create")
@@ -48,7 +48,7 @@ def sanitize_csv(input_file, output_file, expected_fields=4, separator="|"):
 def convert_txt_to_sql(input_txt, output_db, separator="|", chunk_size=5000, progress_callback=None):
     """Convierte una entrada en txt o csv a una base de datos sql"""
     
-    connection = connect_db_file(output_db)
+    connection = connect_and_create_db_file(output_db)
     print("Iniciando conversión...")
     
     start_time = time.time()

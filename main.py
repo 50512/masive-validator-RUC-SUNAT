@@ -128,6 +128,10 @@ class SunatApp:
 
     # --- LÓGICA PRINCIPAL ---
     def descargar_logica(self):
+        # al descargar una nueva base, se elimina la anterior
+        if os.path.exists(PATH_PADRON_DB):
+            os.remove(PATH_PADRON_DB)
+        
         self.btn_descargar.config(state="disabled")
         self.btn_procesar.config(state="disabled")
         self.log("Iniciando descarga del Padrón SUNAT (300MB+)...")
@@ -253,6 +257,7 @@ class SunatApp:
 
     def optimizar_db(self):
         TEMP_SANITIZED_TXT = os.path.join(SUNAT_FOLDER, ".temp_snt.txt")
+        TEMP_DB = PATH_PADRON_DB+".tmp"
         
         if not os.path.exists(PATH_PADRON_ZIP):
             self.root.after(0, self.verificar_padron_local)
@@ -263,7 +268,10 @@ class SunatApp:
             self.root.after(0, self.verificar_padron_local)
             return
         
-        self.log("⚙️Iniciando optimización...")
+        if os.path.exists(TEMP_DB):
+            os.remove(TEMP_DB)
+        
+        self.log("⚙️ Iniciando optimización...")
         with zipfile.ZipFile(PATH_PADRON_ZIP, 'r') as z:
             in_zip_name = z.filelist[0].filename
             z.extractall(SUNAT_FOLDER)
@@ -275,10 +283,12 @@ class SunatApp:
             os.remove(TEMP_DB_TXT)
             
             self.log("Optimizando base de datos...")
-            txt_to_db.convert_txt_to_sql(TEMP_SANITIZED_TXT, PATH_PADRON_DB, chunk_size=10000, progress_callback=self.update_progress_bar)
+            txt_to_db.convert_txt_to_sql(TEMP_SANITIZED_TXT, TEMP_DB, chunk_size=10000, progress_callback=self.update_progress_bar)
             os.remove(TEMP_SANITIZED_TXT)
             
-            self.log("✅Base de datos lista")
+            # Si es interrumpe la conversión, el archivo sera solo el temporal
+            os.rename(TEMP_DB, PATH_PADRON_DB)
+            self.log("✅ Base de datos lista")
         
         except Exception as e:
             self.log(f"❌ Error en optimización: {str(e)}")
