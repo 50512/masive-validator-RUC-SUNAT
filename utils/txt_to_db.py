@@ -1,7 +1,7 @@
 import pandas as pd
 import sqlite3
 import time
-from os import path
+from os import path, remove
 
 def connect_db_file(db_path):
     if not path.exists(db_path):
@@ -64,12 +64,12 @@ def convert_txt_to_sql(input_txt, output_db, separator="|", chunk_size=5000):
 def main():
     """runs in a main execution"""
     input_file = input("TO SANITIZE: ")
-    output_db = path.splitext(input_file)[0]
+    output_db = path.splitext(input_file)[0]+".db"
     TEMP_FILE = ".temp_sanitize.txt"
     
     sanitize_csv(input_file, TEMP_FILE)
     convert_txt_to_sql(TEMP_FILE, output_db)
-    
+    remove(TEMP_FILE)
 
 
 if __name__ == "__main__":
