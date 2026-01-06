@@ -6,14 +6,14 @@ import zipfile
 import os
 import threading
 from utils.ruc_digit_checker import digito_verificador_ruc
-import utils.txt_to_db
+import utils.txt_to_db as txt_to_db
 
 # --- CONFIGURACIÓN ---
 SUNAT_FOLDER = "./.sunat-datos"
 URL_PADRON = "https://www.sunat.gob.pe/descargaPRR/padron_reducido_ruc.zip"
 TEMP_DB_TXT = os.path.join(SUNAT_FOLDER, ".temp.txt")
-NOMBRE_PADRON_ZIP = os.path.join(SUNAT_FOLDER, "padron_ruc_sunat.zip")
-NOMBRE_PADRON_DB = os.path.join(SUNAT_FOLDER, "padron_ruc_sunat.db")
+PATH_PADRON_ZIP = os.path.join(SUNAT_FOLDER, "padron_ruc_sunat.zip")
+PATH_PADRON_DB = os.path.join(SUNAT_FOLDER, "padron_ruc_sunat.db")
 
 
 class SunatApp:
@@ -83,8 +83,8 @@ class SunatApp:
 
 
     def verificar_padron_local(self):
-        if not os.path.exists(NOMBRE_PADRON_DB):            
-            if not os.path.exists(NOMBRE_PADRON_ZIP):
+        if not os.path.exists(PATH_PADRON_DB):            
+            if not os.path.exists(PATH_PADRON_ZIP):
                 self.estado_padron.set("❌ Padrón NO encontrado")
                 self.lbl_padron.config(fg="red")
             else:
@@ -95,6 +95,22 @@ class SunatApp:
             self.estado_padron.set("✅ Padrón SUNAT Listo")
             self.lbl_padron.config(fg="green")
             self.btn_descargar.config(state="normal")
+
+
+    def update_progress_bar(self, decimal_percentage):
+        self.root.after(0, lambda: self._set_progress_bar(decimal_percentage=decimal_percentage))
+
+
+    def _set_progress_bar(self, decimal_percentage):
+        percentage = 0
+        if decimal_percentage <= 0.0:
+            percentage = 0
+        elif decimal_percentage >= 1.0:
+            percentage = 100
+        else:
+            percentage = decimal_percentage*100
+        self.progress["value"] = percentage
+        self.root.update_idletasks()
 
 
     # --- HILOS (THREADS) ---
@@ -124,14 +140,13 @@ class SunatApp:
             if not os.path.exists(SUNAT_FOLDER):
                 os.mkdir(SUNAT_FOLDER)
             
-            with open(NOMBRE_PADRON_ZIP, 'wb') as f:
+            with open(PATH_PADRON_ZIP, 'wb') as f:
                 for data in response.iter_content(chunk_size=4096):
                     dl += len(data)
                     f.write(data)
                     if total_length:
-                        porcentaje = (dl / total_length) * 100
-                        self.progress['value'] = porcentaje
-                        self.root.update_idletasks()
+                        porcentaje = dl / total_length
+                        self.update_progress_bar(porcentaje)
             
             self.log("Descarga completa.")
             self.root.after(0, self.verificar_padron_local)
@@ -160,7 +175,7 @@ class SunatApp:
 
     def procesar_logica(self):
         self.btn_procesar.config(state="disabled")
-        self.progress['value'] = 0
+        self.update_progress_bar(0)
         archivo_input = self.archivo_seleccionado.get()
         
         try:
@@ -216,12 +231,11 @@ class SunatApp:
                 
                 # Actualizar barra cada 50 items para no alentar la GUI
                 if i % 50 == 0:
-                    progreso = (i / total_filas) * 100
-                    self.progress['value'] = progreso
-                    self.root.update_idletasks()
+                    progreso = (i / total_filas)
+                    self.update_progress_bar(progreso)
 
             # 4. Guardar
-            self.progress['value'] = 100
+            self.update_progress_bar(100)
             nombre_salida = os.path.splitext(archivo_input)[0] + "_PROCESADO.xlsx"
             pd.DataFrame(resultados).to_excel(nombre_salida, index=False)
             
@@ -230,7 +244,7 @@ class SunatApp:
             os.startfile(os.path.dirname(nombre_salida)) # Abrir carpeta
 
         except Exception as e:
-            self.log(f"❌ ERROR CRÍTICO: {str(e)}", "red")
+            self.log(f"❌ ERROR CRÍTICO: {str(e)}")
             messagebox.showerror("Error", str(e))
         
         finally:
@@ -238,14 +252,40 @@ class SunatApp:
 
 
     def optimizar_db(self):
-        if not os.path.exists(NOMBRE_PADRON_ZIP):
+        TEMP_SANITIZED_TXT = os.path.join(SUNAT_FOLDER, ".temp_snt.txt")
+        
+        if not os.path.exists(PATH_PADRON_ZIP):
             self.root.after(0, self.verificar_padron_local)
             return
+        
+        if not zipfile.is_zipfile(PATH_PADRON_ZIP):
+            os.remove(PATH_PADRON_ZIP)
+            self.root.after(0, self.verificar_padron_local)
+            return
+        
         self.log("⚙️Iniciando optimización...")
-        with zipfile.ZipFile(NOMBRE_PADRON_ZIP, 'r') as z:
+        with zipfile.ZipFile(PATH_PADRON_ZIP, 'r') as z:
             in_zip_name = z.filelist[0].filename
             z.extractall(SUNAT_FOLDER)
             os.rename(os.path.join(SUNAT_FOLDER, in_zip_name), os.path.relpath(TEMP_DB_TXT))
+        
+        try:
+            self.log("Limpiando base de datos...")
+            txt_to_db.sanitize_csv(TEMP_DB_TXT, TEMP_SANITIZED_TXT)
+            os.remove(TEMP_DB_TXT)
+            
+            self.log("Optimizando base de datos...")
+            txt_to_db.convert_txt_to_sql(TEMP_SANITIZED_TXT, PATH_PADRON_DB, chunk_size=10000, progress_callback=self.update_progress_bar)
+            os.remove(TEMP_SANITIZED_TXT)
+            
+            self.log("✅Base de datos lista")
+        
+        except Exception as e:
+            self.log(f"❌ Error en optimización: {str(e)}")
+            messagebox.showerror("Error", f"Fallo en la optimización: {e}")
+        
+        finally:
+            self.root.after(0, self.verificar_padron_local)
 
 
 if __name__ == "__main__":
