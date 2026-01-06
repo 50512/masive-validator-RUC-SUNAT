@@ -5,11 +5,16 @@ import requests
 import zipfile
 import os
 import threading
+from utils.ruc_digit_checker import digito_verificador_ruc
+import utils.txt_to_db
 
 # --- CONFIGURACIÓN ---
+SUNAT_FOLDER = "./.sunat-datos"
 URL_PADRON = "https://www.sunat.gob.pe/descargaPRR/padron_reducido_ruc.zip"
-ARCHIVO_ZIP = "padron_reducido_ruc.zip"
-NOMBRE_PADRON_TXT = "padron_reducido_ruc.txt"
+TEMP_DB_TXT = os.path.join(SUNAT_FOLDER, ".temp.txt")
+NOMBRE_PADRON_ZIP = os.path.join(SUNAT_FOLDER, "padron_ruc_sunat.zip")
+NOMBRE_PADRON_DB = os.path.join(SUNAT_FOLDER, "padron_ruc_sunat.db")
+
 
 class SunatApp:
     def __init__(self, root):
@@ -27,9 +32,8 @@ class SunatApp:
         # Variables
         self.archivo_seleccionado = tk.StringVar()
         self.estado_padron = tk.StringVar(value="Verificando padrón...")
-        
+
         # --- INTERFAZ ---
-        
         # 1. Sección Padrón
         frame_padron = tk.LabelFrame(root, text="1. Base de Datos SUNAT", padx=10, pady=10)
         frame_padron.pack(fill="x", padx=10, pady=5)
@@ -51,14 +55,16 @@ class SunatApp:
         frame_action = tk.Frame(root, padx=10, pady=10)
         frame_action.pack(fill="x", padx=10, pady=5)
         
-        self.btn_procesar = tk.Button(frame_action, text="🚀 PROCESAR LISTA", command=self.iniciar_procesamiento_thread, 
-                                      bg="#4CAF50", fg="white", font=("Arial", 11, "bold"), state="disabled", width=30)
+        self.btn_procesar = tk.Button(
+            frame_action, text="🚀 PROCESAR LISTA", command=self.iniciar_procesamiento_thread, 
+            bg="#4CAF50", fg="white", font=("Arial", 11, "bold"), state="disabled", width=30
+            )
         self.btn_procesar.pack(pady=5)
 
         # Barra de Progreso
         self.progress = ttk.Progressbar(root, orient="horizontal", length=550, mode="determinate", style="Green.Horizontal.TProgressbar")
         self.progress.pack(pady=5)
-        
+
         # Consola de Log
         self.log_area = scrolledtext.ScrolledText(root, width=70, height=12, state='disabled', font=("Consolas", 9))
         self.log_area.pack(padx=10, pady=5)
@@ -66,36 +72,43 @@ class SunatApp:
         # Verificar estado inicial
         self.verificar_padron_local()
 
+
     # --- LÓGICA DE UTILIDAD ---
-    def log(self, mensaje, color="black"):
+    def log(self, mensaje):
         self.log_area.config(state='normal')
         self.log_area.insert(tk.END, f">> {mensaje}\n")
         self.log_area.see(tk.END)
         self.log_area.config(state='disabled')
         self.root.update_idletasks()
 
+
     def verificar_padron_local(self):
-        if os.path.exists(NOMBRE_PADRON_TXT):
+        if not os.path.exists(NOMBRE_PADRON_DB):            
+            if not os.path.exists(NOMBRE_PADRON_ZIP):
+                self.estado_padron.set("❌ Padrón NO encontrado")
+                self.lbl_padron.config(fg="red")
+            else:
+                self.estado_padron.set("⚙️ Optimizando padrón")
+                self.lbl_padron.config(fg="#e98000")
+                self.iniciar_optimizacion_db_threat()
+        else:
             self.estado_padron.set("✅ Padrón SUNAT Listo")
             self.lbl_padron.config(fg="green")
             self.btn_descargar.config(state="normal")
-        else:
-            self.estado_padron.set("❌ Padrón NO encontrado")
-            self.lbl_padron.config(fg="red")
 
-    def calcular_digito_ruc(self, ruc_base):
-        factores = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2]
-        suma = sum(int(ruc_base[i]) * factores[i] for i in range(10))
-        residuo = suma % 11
-        diferencia = 11 - residuo
-        return 0 if diferencia == 10 else (1 if diferencia == 11 else diferencia)
 
     # --- HILOS (THREADS) ---
     def iniciar_descarga_thread(self):
         threading.Thread(target=self.descargar_logica, daemon=True).start()
 
+
     def iniciar_procesamiento_thread(self):
         threading.Thread(target=self.procesar_logica, daemon=True).start()
+
+
+    def iniciar_optimizacion_db_threat(self):
+        threading.Thread(target=self.optimizar_db, daemon=True).start()
+
 
     # --- LÓGICA PRINCIPAL ---
     def descargar_logica(self):
@@ -108,7 +121,10 @@ class SunatApp:
             total_length = int(response.headers.get('content-length', 0))
             dl = 0
             
-            with open(ARCHIVO_ZIP, 'wb') as f:
+            if not os.path.exists(SUNAT_FOLDER):
+                os.mkdir(SUNAT_FOLDER)
+            
+            with open(NOMBRE_PADRON_ZIP, 'wb') as f:
                 for data in response.iter_content(chunk_size=4096):
                     dl += len(data)
                     f.write(data)
@@ -117,15 +133,11 @@ class SunatApp:
                         self.progress['value'] = porcentaje
                         self.root.update_idletasks()
             
-            self.log("Descarga completa. Descomprimiendo ZIP...")
-            with zipfile.ZipFile(ARCHIVO_ZIP, 'r') as z:
-                z.extractall()
-                
-            self.log("✅ Padrón actualizado correctamente.", "green")
+            self.log("Descarga completa.")
             self.root.after(0, self.verificar_padron_local)
             
         except Exception as e:
-            self.log(f"❌ Error en descarga: {str(e)}", "red")
+            self.log(f"❌ Error en descarga: {str(e)}")
             messagebox.showerror("Error", f"Fallo en la descarga: {e}")
             
         finally:
@@ -133,6 +145,7 @@ class SunatApp:
             if self.archivo_seleccionado.get():
                 self.btn_procesar.config(state="normal")
             self.progress['value'] = 0
+
 
     def seleccionar_excel(self):
         archivo = filedialog.askopenfilename(filetypes=[("Excel Files", "*.xlsx *.xls")])
@@ -143,6 +156,7 @@ class SunatApp:
                 self.btn_procesar.config(state="normal")
             else:
                 self.log("⚠️ Primero debes descargar el padrón SUNAT.")
+
 
     def procesar_logica(self):
         self.btn_procesar.config(state="disabled")
@@ -221,6 +235,18 @@ class SunatApp:
         
         finally:
             self.btn_procesar.config(state="normal")
+
+
+    def optimizar_db(self):
+        if not os.path.exists(NOMBRE_PADRON_ZIP):
+            self.root.after(0, self.verificar_padron_local)
+            return
+        self.log("⚙️Iniciando optimización...")
+        with zipfile.ZipFile(NOMBRE_PADRON_ZIP, 'r') as z:
+            in_zip_name = z.filelist[0].filename
+            z.extractall(SUNAT_FOLDER)
+            os.rename(os.path.join(SUNAT_FOLDER, in_zip_name), os.path.relpath(TEMP_DB_TXT))
+
 
 if __name__ == "__main__":
     root = tk.Tk()
