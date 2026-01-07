@@ -203,16 +203,28 @@ class SunatApp:
 
             # Guardar
             self.update_progress_bar(100)
+            self.log("💾 Guardando y formateando Excel...")
             nombre_salida = os.path.splitext(archivo_input)[0] + "_PROCESADO.xlsx"
-            pd.DataFrame(resultados).to_excel(
-                nombre_salida, index=False, 
-                header=[
-                    "Documento origen",
-                    "RUC Validado",
-                    "Nombre o razón social",
-                    "Estado de contribuyente",
-                    "Condición de domicilio"
-                    ])
+            header=["Documento origen", "RUC Validado", "Nombre o razón social", 
+                    "Estado de contribuyente", "Condición de domicilio"]
+            df_export = pd.DataFrame(resultados, columns=header)
+            
+            with pd.ExcelWriter(nombre_salida, engine="openpyxl") as writer:
+                df_export.to_excel(writer, index=False, sheet_name="Resultados")
+                worksheet = writer.sheets["Resultados"]
+                
+                for i, column in enumerate(df_export.columns):
+                    max_len_data = df_export[column].astype(str).map(len).max()
+                    len_header = len(column)
+                    
+                    max_len = max(max_len_data, len_header) if pd.notna(max_len_data) else len_header
+                    
+                    # se añade cierto margen para mejorar la visibilidad
+                    fixed_width = max_len + 2
+                    
+                    from openpyxl.utils import get_column_letter
+                    col_letter = get_column_letter(i+1)
+                    worksheet.column_dimensions[col_letter].width = fixed_width
             
             self.log(f"✅ ¡ÉXITO! Archivo guardado:\n{os.path.basename(nombre_salida)}")
             messagebox.showinfo("Proceso Terminado", f"Se generó el archivo:\n{nombre_salida}")
