@@ -193,7 +193,7 @@ class SunatApp:
             # Buscar columna
             col_doc = next((c for c in df_user.columns if str(c).strip().lower() == 'documento'), None)
             if not col_doc:
-                raise Exception("No se encontró columna 'Documento' en el Excel.")
+                raise LookupError("No se encontró columna 'Documento' en el Excel.")
 
             # Procesar
             total_filas = len(df_user)
@@ -204,7 +204,15 @@ class SunatApp:
             # Guardar
             self.update_progress_bar(100)
             nombre_salida = os.path.splitext(archivo_input)[0] + "_PROCESADO.xlsx"
-            pd.DataFrame(resultados).to_excel(nombre_salida, index=False)
+            pd.DataFrame(resultados).to_excel(
+                nombre_salida, index=False, 
+                header=[
+                    "Documento origen",
+                    "RUC Validado",
+                    "Nombre o razón social",
+                    "Estado de contribuyente",
+                    "Condición de domicilio"
+                    ])
             
             self.log(f"✅ ¡ÉXITO! Archivo guardado:\n{os.path.basename(nombre_salida)}")
             messagebox.showinfo("Proceso Terminado", f"Se generó el archivo:\n{nombre_salida}")
