@@ -5,6 +5,8 @@ import requests
 import zipfile
 import os
 import threading
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import PatternFill
 import utils.ruc_utilities as ruc_utils
 import utils.txt_to_db as txt_to_db
 
@@ -15,6 +17,8 @@ TEMP_DB_TXT = os.path.join(SUNAT_FOLDER, ".temp.txt")
 PATH_PADRON_ZIP = os.path.join(SUNAT_FOLDER, "padron_ruc_sunat.zip")
 PATH_PADRON_DB = os.path.join(SUNAT_FOLDER, "padron_ruc_sunat.db")
 NOMBRE_PADRON_TABLE = "padron"
+NOT_FOUND_COLOR = "#FFC052".removeprefix("#")
+INVALID_FORMAT_COLOR = "#FF5252".removeprefix("#")
 
 
 class SunatApp:
@@ -222,9 +226,25 @@ class SunatApp:
                     # se añade cierto margen para mejorar la visibilidad
                     fixed_width = max_len + 2
                     
-                    from openpyxl.utils import get_column_letter
                     col_letter = get_column_letter(i+1)
                     worksheet.column_dimensions[col_letter].width = fixed_width
+                    
+
+                for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row):
+                    razon_social = str(row[2].value).strip()
+                    
+                    if razon_social in ruc_utils.RUC_QUERY_ERROR.values():
+                        error_color = None
+                        
+                        if razon_social == ruc_utils.RUC_QUERY_ERROR["NOT_FOUND"]:
+                            error_color = NOT_FOUND_COLOR
+                        elif razon_social == ruc_utils.RUC_QUERY_ERROR["INVALID_FORMAT"]:
+                            error_color = INVALID_FORMAT_COLOR
+                        
+                        fill_error = PatternFill(start_color=error_color, end_color=error_color, fill_type="solid")
+                        
+                        for cell in row:
+                            cell.fill = fill_error
             
             self.log(f"✅ ¡ÉXITO! Archivo guardado:\n{os.path.basename(nombre_salida)}")
             messagebox.showinfo("Proceso Terminado", f"Se generó el archivo:\n{nombre_salida}")

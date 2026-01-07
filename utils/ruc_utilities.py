@@ -1,6 +1,12 @@
 import sqlite3
 
 
+RUC_QUERY_ERROR = {
+    "NOT_FOUND": "NO SE ENCONTRÓ",
+    "INVALID_FORMAT": "RUC INVÁLIDO"
+}
+
+
 def buscar_rucs(lista_rucs, path_db, table_name="main_table"):
     """
     Recibe una lista de rucs:str, verifica si son validos y los busca en la base de datos.
@@ -44,9 +50,9 @@ def buscar_rucs(lista_rucs, path_db, table_name="main_table"):
         ruc_failed = None
         
         if not ruc_limpio:
-            ruc_failed = "RUC INVÁLIDO"
+            ruc_failed = RUC_QUERY_ERROR["INVALID_FORMAT"]
         elif int(ruc_limpio) not in db_cache:
-            ruc_failed = "NO SE ENCONTRÓ"
+            ruc_failed = RUC_QUERY_ERROR["NOT_FOUND"]
         else:
             tupla_final = (ruc_listado,) + db_cache[int(ruc_limpio)]
             resultados_finales.append(tupla_final)
