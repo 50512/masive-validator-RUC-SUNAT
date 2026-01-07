@@ -87,7 +87,7 @@ def generar_dataset_stress(path_db, cantidad, table_name, ratio_error):
 
 def main():
     PATH_DB = "./.sunat-datos/padron_ruc_sunat.db"
-    cantidad = 500000
+    cantidad = input("Inserte cantidad de muestras: ")
     generar_dataset(PATH_DB, cantidad, "padron")
     generar_dataset_stress(PATH_DB, cantidad, "padron", 0.15)
     
