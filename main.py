@@ -5,7 +5,7 @@ import requests
 import zipfile
 import os
 import threading
-from utils.ruc_digit_checker import digito_verificador_ruc
+import utils.ruc_utilities as ruc_utils
 import utils.txt_to_db as txt_to_db
 
 # --- CONFIGURACIÓN ---
@@ -14,6 +14,7 @@ URL_PADRON = "https://www.sunat.gob.pe/descargaPRR/padron_reducido_ruc.zip"
 TEMP_DB_TXT = os.path.join(SUNAT_FOLDER, ".temp.txt")
 PATH_PADRON_ZIP = os.path.join(SUNAT_FOLDER, "padron_ruc_sunat.zip")
 PATH_PADRON_DB = os.path.join(SUNAT_FOLDER, "padron_ruc_sunat.db")
+NOMBRE_PADRON_TABLE = "padron"
 
 
 class SunatApp:
@@ -171,7 +172,7 @@ class SunatApp:
         if archivo:
             self.archivo_seleccionado.set(archivo)
             self.log(f"Archivo seleccionado: {os.path.basename(archivo)}")
-            if os.path.exists(NOMBRE_PADRON_TXT):
+            if os.path.exists(PATH_PADRON_DB):
                 self.btn_procesar.config(state="normal")
             else:
                 self.log("⚠️ Primero debes descargar el padrón SUNAT.")
@@ -183,21 +184,9 @@ class SunatApp:
         archivo_input = self.archivo_seleccionado.get()
         
         try:
-            # 1. Cargar Padrón
-            self.log("⏳ Cargando Padrón SUNAT en memoria (esto toma unos segundos)...")
+            self.log("🔎 Iniciando búsqueda...")
             
-            # Leemos por chunks o optimizado
-            df_padron = pd.read_csv(
-                NOMBRE_PADRON_TXT, sep='|', encoding='latin-1',
-                usecols=[0, 1, 2, 3], names=['RUC', 'NOMBRE', 'ESTADO', 'CONDICION'],
-                dtype={'RUC': str}, engine='c'
-            )
-            
-            self.log("⚙️ Indexando base de datos...")
-            bd_sunat = df_padron.set_index('RUC').to_dict('index')
-            del df_padron # Liberar memoria
-            
-            # 2. Cargar Excel
+            # Cargar Excel
             self.log(f"Leyendo Excel: {os.path.basename(archivo_input)}")
             df_user = pd.read_excel(archivo_input, dtype=str)
             
@@ -206,39 +195,13 @@ class SunatApp:
             if not col_doc:
                 raise Exception("No se encontró columna 'Documento' en el Excel.")
 
-            # 3. Procesar
-            resultados = []
+            # Procesar
             total_filas = len(df_user)
             self.log(f"Analizando {total_filas} registros...")
-            
-            for i, doc in enumerate(df_user[col_doc]):
-                doc = str(doc).strip()
-                ruc_final = ""
-                
-                if len(doc) == 11 and doc.isdigit():
-                    ruc_final = doc
-                elif len(doc) == 8 and doc.isdigit():
-                    base = "10" + doc
-                    digito = self.calcular_digito_ruc(base)
-                    ruc_final = base + str(digito)
-                
-                info = bd_sunat.get(ruc_final)
-                
-                res = {
-                    "Documento Input": doc,
-                    "RUC Validado": ruc_final if ruc_final else "-",
-                    "Razon Social": info['NOMBRE'] if info else "-",
-                    "Estado": info['ESTADO'] if info else "NO HALLADO",
-                    "Condicion": info['CONDICION'] if info else "-"
-                }
-                resultados.append(res)
-                
-                # Actualizar barra cada 50 items para no alentar la GUI
-                if i % 50 == 0:
-                    progreso = (i / total_filas)
-                    self.update_progress_bar(progreso)
+            resultados = ruc_utils.buscar_rucs(df_user[col_doc], PATH_PADRON_DB, NOMBRE_PADRON_TABLE)
+            resultados = [map(str, res) for res in resultados]
 
-            # 4. Guardar
+            # Guardar
             self.update_progress_bar(100)
             nombre_salida = os.path.splitext(archivo_input)[0] + "_PROCESADO.xlsx"
             pd.DataFrame(resultados).to_excel(nombre_salida, index=False)
@@ -283,7 +246,9 @@ class SunatApp:
             os.remove(TEMP_DB_TXT)
             
             self.log("Optimizando base de datos...")
-            txt_to_db.convert_txt_to_sql(TEMP_SANITIZED_TXT, TEMP_DB, chunk_size=10000, progress_callback=self.update_progress_bar)
+            txt_to_db.convert_txt_to_sql(
+                TEMP_SANITIZED_TXT, TEMP_DB, NOMBRE_PADRON_TABLE, 
+                chunk_size=10000, progress_callback=self.update_progress_bar)
             os.remove(TEMP_SANITIZED_TXT)
             
             # Si es interrumpe la conversión, el archivo sera solo el temporal
