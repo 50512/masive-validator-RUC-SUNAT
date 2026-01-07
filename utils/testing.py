@@ -2,7 +2,7 @@ import sqlite3
 import pandas as pd
 import time
 import random
-from os import path
+from os import path, mkdir
 
 
 TEST_FOLDER = "./.tests_files"
@@ -36,6 +36,8 @@ def generar_dataset(path_db, cantidad, table_name):
     muestras = extraer_muestras(path_db, cantidad, table_name)
     
     df = pd.DataFrame(muestras, columns=["Documento"], dtype=str)
+    if not path.exists(TEST_FOLDER):
+        mkdir(TEST_FOLDER)
     filename = path.join(TEST_FOLDER,f"test_dataset_{cantidad}.xlsx")
     
     df.to_excel(filename, index=False)
@@ -78,6 +80,8 @@ def generar_dataset_stress(path_db, cantidad, table_name, ratio_error):
     
     df = pd.DataFrame(dataset, columns=["Documento"])
     output_name = path.join(TEST_FOLDER, f"TEST_STRESS_{cantidad}.xlsx")
+    if not path.exists(TEST_FOLDER):
+        mkdir(TEST_FOLDER)
     df.to_excel(output_name, index=False)
     
     print(f"Dataset generado en {round(time.time()-start_time,2)}s")
@@ -87,7 +91,7 @@ def generar_dataset_stress(path_db, cantidad, table_name, ratio_error):
 
 def main():
     PATH_DB = "./.sunat-datos/padron_ruc_sunat.db"
-    cantidad = input("Inserte cantidad de muestras: ")
+    cantidad = int(input("Inserte cantidad de muestras: "))
     generar_dataset(PATH_DB, cantidad, "padron")
     generar_dataset_stress(PATH_DB, cantidad, "padron", 0.15)
     
