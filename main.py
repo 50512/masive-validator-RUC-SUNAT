@@ -3,6 +3,7 @@ from tkinter import ttk, filedialog, messagebox, scrolledtext
 import pandas as pd
 import requests
 import zipfile
+import time
 import os
 import threading
 from openpyxl.utils import get_column_letter
@@ -187,7 +188,7 @@ class SunatApp:
         
         try:
             self.log("🔎 Iniciando búsqueda...")
-            
+            start_time = time.time()
             # Cargar Excel
             self.log(f"Leyendo Excel: {os.path.basename(archivo_input)}")
             df_user = pd.read_excel(archivo_input, dtype=str)
@@ -243,6 +244,7 @@ class SunatApp:
                             cell.fill = current_fill
             
             self.log(f"✅ ¡ÉXITO! Archivo guardado:\n{os.path.basename(nombre_salida)}")
+            self.log(f"Operación completada en {round(time.time()-start_time,2)} segundos")
             messagebox.showinfo("Proceso Terminado", f"Se generó el archivo:\n{nombre_salida}")
             os.startfile(os.path.dirname(nombre_salida)) # Abrir carpeta
 
