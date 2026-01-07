@@ -2,6 +2,7 @@ import sqlite3
 
 
 def buscar_rucs(lista_rucs, path_db, table_name="main_table"):
+    """"""
     rucs_enteros = [int(ruc) for ruc in limpiar_rucs(lista_rucs)]
     CHUNK_SQL_SIZE = 900
     resultados=[]
@@ -25,28 +26,34 @@ def buscar_rucs(lista_rucs, path_db, table_name="main_table"):
 def limpiar_rucs(lista_rucs):
     rucs_limpios = []
     for doc in lista_rucs:
-        doc = str(doc).strip()
-        ruc_final = ""
-        
-        # Lógica de conversión
-        if len(doc) == 11 and doc.isdigit():
-            digito = digito_verificador_ruc(doc)
-            
-            # corrige el digito de verificación del RUC ingresado de ser necesario
-            if not doc.endswith(str(digito)):
-                ruc_final = doc.removesuffix(doc[10]) + str(digito)
-            else:
-                ruc_final = doc
-        
-        # para encontrar RUC 10 con solo el DNI
-        elif len(doc) == 8 and doc.isdigit():
-            base = "10" + doc
-            digito = digito_verificador_ruc(base)
-            ruc_final = base + str(digito)
+        ruc_final = limpiar_ruc(doc)
         if ruc_final:
             rucs_limpios.append(ruc_final)
 
     return rucs_limpios
+
+
+def limpiar_ruc(ruc):
+    ruc = str(ruc).strip()
+    ruc_final = ""
+    
+    # Lógica de conversión
+    if len(ruc) == 11 and ruc.isdigit():
+        digito = digito_verificador_ruc(ruc)
+        
+        # corrige el digito de verificación del RUC ingresado de ser necesario
+        if not ruc.endswith(str(digito)):
+            ruc_final = ruc.removesuffix(ruc[10]) + str(digito)
+        else:
+            ruc_final = ruc
+    
+    # para encontrar RUC 10 con solo el DNI
+    elif len(ruc) == 8 and ruc.isdigit():
+        base = "10" + ruc
+        digito = digito_verificador_ruc(base)
+        ruc_final = base + str(digito)
+    
+    return ruc_final if ruc_final else None
 
 
 def digito_verificador_ruc(ruc_base):
