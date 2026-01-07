@@ -1,9 +1,17 @@
 import sqlite3
 
 
-RUC_QUERY_ERROR = {
-    "NOT_FOUND": "NO SE ENCONTRÓ",
-    "INVALID_FORMAT": "RUC INVÁLIDO"
+RUC_QUERY_ERRORS = {
+    "NOT_FOUND": 
+        {
+            "text":"NO SE ENCONTRÓ", 
+            "color":"#FFC052".removeprefix("#")
+        },
+    "INVALID_FORMAT": 
+        {
+            "text":"RUC INVÁLIDO", 
+            "color":"#FF5252".removeprefix("#")
+        }
 }
 
 
@@ -50,9 +58,9 @@ def buscar_rucs(lista_rucs, path_db, table_name="main_table"):
         ruc_failed = None
         
         if not ruc_limpio:
-            ruc_failed = RUC_QUERY_ERROR["INVALID_FORMAT"]
+            ruc_failed = RUC_QUERY_ERRORS["INVALID_FORMAT"]["text"]
         elif int(ruc_limpio) not in db_cache:
-            ruc_failed = RUC_QUERY_ERROR["NOT_FOUND"]
+            ruc_failed = RUC_QUERY_ERRORS["NOT_FOUND"]["text"]
         else:
             tupla_final = (ruc_listado,) + db_cache[int(ruc_limpio)]
             resultados_finales.append(tupla_final)

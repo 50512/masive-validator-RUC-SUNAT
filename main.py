@@ -13,12 +13,10 @@ import utils.txt_to_db as txt_to_db
 # --- CONFIGURACIÓN ---
 SUNAT_FOLDER = "./.sunat-datos"
 URL_PADRON = "https://www.sunat.gob.pe/descargaPRR/padron_reducido_ruc.zip"
-TEMP_DB_TXT = os.path.join(SUNAT_FOLDER, ".temp.txt")
+TEMP_DB_TXT = os.path.join(SUNAT_FOLDER, ".padron_txt.tmp")
 PATH_PADRON_ZIP = os.path.join(SUNAT_FOLDER, "padron_ruc_sunat.zip")
 PATH_PADRON_DB = os.path.join(SUNAT_FOLDER, "padron_ruc_sunat.db")
 NOMBRE_PADRON_TABLE = "padron"
-NOT_FOUND_COLOR = "#FFC052".removeprefix("#")
-INVALID_FORMAT_COLOR = "#FF5252".removeprefix("#")
 
 
 class SunatApp:
@@ -230,21 +228,19 @@ class SunatApp:
                     worksheet.column_dimensions[col_letter].width = fixed_width
                     
 
+                map_colores = {v["text"]:v["color"] for v in ruc_utils.RUC_QUERY_ERRORS.values()}
+                cache_fills = {
+                    text: PatternFill(start_color=color, end_color=color, fill_type="solid")
+                    for text, color in map_colores.items()
+                    }
+
                 for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row):
                     razon_social = str(row[2].value).strip()
-                    
-                    if razon_social in ruc_utils.RUC_QUERY_ERROR.values():
-                        error_color = None
-                        
-                        if razon_social == ruc_utils.RUC_QUERY_ERROR["NOT_FOUND"]:
-                            error_color = NOT_FOUND_COLOR
-                        elif razon_social == ruc_utils.RUC_QUERY_ERROR["INVALID_FORMAT"]:
-                            error_color = INVALID_FORMAT_COLOR
-                        
-                        fill_error = PatternFill(start_color=error_color, end_color=error_color, fill_type="solid")
-                        
+
+                    if razon_social in cache_fills:
+                        current_fill = cache_fills[razon_social]
                         for cell in row:
-                            cell.fill = fill_error
+                            cell.fill = current_fill
             
             self.log(f"✅ ¡ÉXITO! Archivo guardado:\n{os.path.basename(nombre_salida)}")
             messagebox.showinfo("Proceso Terminado", f"Se generó el archivo:\n{nombre_salida}")
@@ -259,7 +255,7 @@ class SunatApp:
 
 
     def optimizar_db(self):
-        TEMP_SANITIZED_TXT = os.path.join(SUNAT_FOLDER, ".temp_snt.txt")
+        TEMP_SANITIZED_TXT = os.path.join(SUNAT_FOLDER, ".sanitized_db.tmp")
         TEMP_DB = PATH_PADRON_DB+".tmp"
         
         if not os.path.exists(PATH_PADRON_ZIP):
