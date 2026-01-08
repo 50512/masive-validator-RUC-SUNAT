@@ -1,6 +1,8 @@
 import sqlite3
+import requests
+from rich.progress import Progress
 
-
+URL_PADRON = "https://www.sunat.gob.pe/descargaPRR/padron_reducido_ruc.zip"
 RUC_QUERY_ERRORS = {
     "NOT_FOUND": 
         {
@@ -13,6 +15,26 @@ RUC_QUERY_ERRORS = {
             "color":"#FF5252".removeprefix("#")
         }
 }
+
+
+def descargar_padron_reducido(output_file, progress_callback=None):
+    response = requests.get(URL_PADRON, stream=True)
+    total_length = int(response.headers.get('content-length', 0))
+    dl = 0
+    with open(output_file, 'wb') as f:
+        bar = Progress()
+        bar.start()
+        tarea = bar.add_task("Descargando padrón", total=1)
+        for data in response.iter_content(chunk_size=4096):
+            dl += len(data)
+            f.write(data)
+            if total_length:
+                porcentaje = dl / total_length
+                bar.update(tarea, completed=porcentaje)
+                progress_callback(porcentaje) if progress_callback else None
+        bar.update(tarea, completed=1)
+        bar.stop()
+
 
 
 def buscar_rucs(lista_rucs, path_db, table_name="main_table"):

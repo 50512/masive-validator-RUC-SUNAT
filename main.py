@@ -13,7 +13,6 @@ import utils.txt_to_db as txt_to_db
 
 # --- CONFIGURACIÓN ---
 SUNAT_FOLDER = "./.sunat-datos"
-URL_PADRON = "https://www.sunat.gob.pe/descargaPRR/padron_reducido_ruc.zip"
 TEMP_DB_TXT = os.path.join(SUNAT_FOLDER, ".padron_txt.tmp")
 PATH_PADRON_ZIP = os.path.join(SUNAT_FOLDER, "padron_ruc_sunat.zip")
 PATH_PADRON_DB = os.path.join(SUNAT_FOLDER, "padron_ruc_sunat.db")
