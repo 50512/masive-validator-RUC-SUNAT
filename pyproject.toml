@@ -55,3 +55,4 @@ profile = "black"
 [tool.taskipy.tasks]
 format = "isort . && black ."
 run = "massruc"
+test = "pytest"

@@ -10,8 +10,7 @@ import requests
 from openpyxl.styles import PatternFill
 from openpyxl.utils import get_column_letter
 
-from massruc import ruc_utilities as ruc_utils
-from massruc import txt_to_db as txt_to_db
+from massruc import ruc_utils, txt_to_db
 
 # --- CONFIGURACIÓN ---
 SUNAT_FOLDER = "./.sunat-datos"
