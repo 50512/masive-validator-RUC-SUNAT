@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "massive-validator-RUC-SUNAT"
+version = "0.1.0"
+readme = "README.md"
+requires-python = ">=3.14"
+license = {text = "MIT"}
+authors = [
+    {name = "Juan Diaz (50512)", email = "me@50512.dev"},
+    {name = "Sr.Gato"}
+]
+keywords = ["sunat", "ruc", "sqlite", "excel", "pandas"]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: Microsoft :: Windows",
+    "Topic :: Database",
+]
+
+dependencies = [
+    "pandas>=2.3.0",
+    "openpyxl>=3.1.0",
+    "requests>=2.32.5",
+    "rich>=14.2.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "isort",
+    "pyinstaller",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py314']
+
+[tool.isort]
+profile = "black"
