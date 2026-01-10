@@ -176,20 +176,12 @@ class SunatApp:
         self.log("Iniciando descarga del Padrón SUNAT (300MB+)...")
 
         try:
-            response = requests.get(URL_PADRON, stream=True)
-            total_length = int(response.headers.get("content-length", 0))
-            dl = 0
-
             if not os.path.exists(SUNAT_FOLDER):
                 os.mkdir(SUNAT_FOLDER)
 
-            with open(PATH_PADRON_ZIP, "wb") as f:
-                for data in response.iter_content(chunk_size=4096):
-                    dl += len(data)
-                    f.write(data)
-                    if total_length:
-                        porcentaje = dl / total_length
-                        self.update_progress_bar(porcentaje)
+            ruc_utils.descargar_padron_reducido(
+                PATH_PADRON_ZIP, progress_callback=self.update_progress_bar
+            )
 
             self.log("Descarga completa.")
             self.root.after(0, self.verificar_padron_local)

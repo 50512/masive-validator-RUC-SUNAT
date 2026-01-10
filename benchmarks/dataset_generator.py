@@ -93,24 +93,6 @@ def generar_dataset_stress(path_db, cantidad, table_name, ratio_error):
 
     print(f"Dataset generado en {round(time.time()-start_time,2)}s")
     print(f"✅ ¡Dataset de estrés listo!: {output_name}")
-    con = sqlite3.connect(path_db)
-    cursor = con.cursor()
-
-    print("Extrayendo todos los RUCs...")
-    start_time = time.time()
-
-    cursor.execute(f"SELECT ruc FROM {table_name}")
-    dataset = [row[0] for row in cursor.fetchall()]
-
-    con.close()
-    df = pd.DataFrame(dataset, columns=["Documento"])
-    output_name = path.join(TEST_FOLDER, "FULL_STRESS_TEST.xlsx")
-    if not path.exists(TEST_FOLDER):
-        mkdir(TEST_FOLDER)
-    df.to_excel(output_name, index=False)
-
-    print(f"Dataset generado en {round(time.time()-start_time,2)}s")
-    print(f"✅ ¡Dataset de estrés completo listo!: {output_name}")
 
 
 def main():
