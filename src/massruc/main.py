@@ -10,8 +10,8 @@ import requests
 from openpyxl.styles import PatternFill
 from openpyxl.utils import get_column_letter
 
-import utils.ruc_utilities as ruc_utils
-import utils.txt_to_db as txt_to_db
+from massruc import ruc_utilities as ruc_utils
+from massruc import txt_to_db as txt_to_db
 
 # --- CONFIGURACIÓN ---
 SUNAT_FOLDER = "./.sunat-datos"
@@ -363,7 +363,11 @@ class SunatApp:
             self.root.after(0, self.verificar_padron_local)
 
 
-if __name__ == "__main__":
+def main():
     root = tk.Tk()
-    app = SunatApp(root)
+    SunatApp(root)
     root.mainloop()
+
+
+if __name__ == "__main__":
+    main()

@@ -2,8 +2,14 @@
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [project]
-name = "massive-validator-RUC-SUNAT"
+name = "massruc"
 version = "0.1.0"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -27,11 +33,15 @@ dependencies = [
     "rich>=14.2.0"
 ]
 
+[project.scripts]
+massruc = "massruc.main:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest",
     "black",
     "isort",
+    "taskipy",
     "pyinstaller",
 ]
 
@@ -41,3 +51,7 @@ target-version = ['py314']
 
 [tool.isort]
 profile = "black"
+
+[tool.taskipy.tasks]
+format = "isort . && black ."
+run = "massruc"

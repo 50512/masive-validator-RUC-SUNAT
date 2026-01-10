@@ -1,4 +1,4 @@
-# Validador masivo RUC SUNAT
+# Validador masivo RUC SUNAT (massruc)
 
 Este proyecto permite verificar una lista de RUC's, ya sean RUC 10 o RUC 20, directamente con el patrón oficial de la SUNAT, devolviendo: **RUC, razón social, estado del contribuyente y estado domiciliario.**
 
